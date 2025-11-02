@@ -28,12 +28,14 @@ Each line contains either:
 ```asm
 LDI R0, 100     ; Load immediate value 100 into R0
 MOV R1, R0      ; Copy value from R0 to R1
+```
 
 ### Arithmetic Operations
 ```asm
 ADD R0, R1      ; R0 = R0 + R1
 SUB R0, R1      ; R0 = R0 - R1  
 INC R0          ; R0 = R0 + 1
+```
 
 ### Comparison
 CMP R0, R1      ; Compare R0 and R1, set flags
@@ -45,6 +47,7 @@ JMP my_label    ; Unconditional jump
 JZ  target      ; Jump if Zero flag set
 JNZ target      ; Jump if Zero flag not set
 HLT             ; Halt execution
+```
 
 ### Comments
 Start with semicolon: ; This is a comment
