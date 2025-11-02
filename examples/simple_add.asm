@@ -1,0 +1,4 @@
+LDI R0, 15
+LDI R1, 27
+ADD R0, R1
+HLT
