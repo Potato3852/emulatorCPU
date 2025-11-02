@@ -318,11 +318,11 @@ void assemble_pass2(struct AssemblerState* state, struct CPU* cpu, const char* c
 void assemble(struct CPU* cpu, const char* code, uint16_t start_address) {
     struct AssemblerState state;
 
-    printf("=== ПРОХОД 1: Поиск меток ===\n");
+    printf("=== Pass 1: Finding labels ===\n");
     assemble_pass1(&state, code, start_address);
     
-    printf("=== ПРОХОД 2: Генерация кода ===\n");
+    printf("=== Pass 2: Generation code ===\n");
     assemble_pass2(&state, cpu, code, start_address);
     
-    printf("Ассемблирование завершено. Найдено %d меток\n", state.label_count);
+    printf("Assembling complete. Found %d labels\n", state.label_count);
 }
