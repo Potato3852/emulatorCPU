@@ -38,7 +38,9 @@ INC R0          ; R0 = R0 + 1
 ```
 
 ### Comparison
+```asm
 CMP R0, R1      ; Compare R0 and R1, set flags
+```
 
 ### Control Flow
 ```asm
@@ -50,5 +52,5 @@ HLT             ; Halt execution
 ```
 
 ### Comments
-Start with semicolon: ; This is a comment
-Can be at end of line: ADD R0, R1 ; Add values
+- Start with semicolon: ; This is a comment
+- Can be at end of line: ADD R0, R1 ; Add values
