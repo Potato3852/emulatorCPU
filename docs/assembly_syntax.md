@@ -54,3 +54,11 @@ HLT             ; Halt execution
 ### Comments
 - Start with semicolon: ; This is a comment
 - Can be at end of line: ADD R0, R1 ; Add values
+
+### Memory Operations
+```asm
+ST R0, [0x0100]    ; Store R0 at address 0x0100
+LD R1, [256]       ; Load from address 256 to R1
+PUSH R0            ; Push R0 to stack
+POP R1             ; Pop from stack to R1
+```

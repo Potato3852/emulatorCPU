@@ -7,6 +7,7 @@ void cpu_init(struct CPU* cpu) {
     }
 
     cpu->PC = 0;
+    cpu->SP = 0x200;
     cpu->FLAGS = 0;
     cpu->running = 1;
 
@@ -21,6 +22,7 @@ void cpu_print_state(struct CPU* cpu) {
         printf("R[%d]: 0x%02X (%d)\n", i, cpu->R[i], cpu->R[i]);
     }
     printf("PC: 0x%04X\n", cpu->PC);
+    printf("SP: 0x%04X\n", cpu->SP);
     printf("FLAGS: Z=%d C=%d (0x%02X)\n", (cpu->FLAGS & FLAG_ZERO) ? 1 : 0, (cpu->FLAGS & FLAG_CARRY) ? 1 : 0, cpu->FLAGS);
     printf("RUNNING: %d\n", cpu->running);
 }
@@ -171,7 +173,65 @@ void cpu_step(struct CPU* cpu) {
                 }
                 break;
             }
-            
+
+        case OP_ST: {
+                uint8_t reg = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                uint8_t low_byte = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                uint8_t high_byte = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                
+                uint16_t mem_address = (high_byte << 8) | low_byte;
+                
+                if(reg < 4) {
+                    memory_write(cpu, mem_address, cpu->R[reg]);
+                    printf("DEBUG: ST R%d -> [0x%04X] (value: %d)\n", reg, mem_address, cpu->R[reg]);
+                }
+                break;
+            }
+
+        case OP_LD: {
+                uint8_t reg = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                uint8_t low_byte = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                uint8_t high_byte = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                
+                uint16_t mem_address = (high_byte << 8) | low_byte;
+                
+                if(reg < 4) {
+                    cpu->R[reg] = memory_read(cpu, mem_address);
+                    printf("DEBUG: LD R%d <- [0x%04X] (value: %d)\n", reg, mem_address, cpu->R[reg]);
+                }
+                break;
+            }  
+
+        case OP_PUSH: {
+                uint8_t reg = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                
+                if(reg < 4) {
+                    cpu->SP--;
+                    memory_write(cpu, cpu->SP, cpu->R[reg]);
+                    printf("DEBUG: PUSH R%d -> [SP=0x%04X]\n", reg, cpu->SP);
+                }
+                break;
+            }
+
+        case OP_POP: {
+                uint8_t reg = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                
+                if(reg < 4) {
+                    cpu->R[reg] = memory_read(cpu, cpu->SP);
+                    cpu->SP++;
+                    printf("DEBUG: POP R%d <- [SP=0x%04X] (value: %d)\n", reg, cpu->SP, cpu->R[reg]);
+                }
+                break;
+            }
+
         default:
             printf("Unknown instruction: 0x%02X at PC=0x%04X\n", instruction, cpu->PC);
             cpu->running = 0;

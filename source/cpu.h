@@ -9,20 +9,26 @@
 #define FLAG_CARRY (1 << 1)
 
 //Opcodes
-#define OP_HLT 0x00
-#define OP_LDI 0x01
-#define OP_ADD 0x02
-#define OP_SUB 0x03
-#define OP_JMP 0x04
-#define OP_JZ  0x05
-#define OP_MOV 0x06
-#define OP_INC 0x07
-#define OP_CMP 0x08
-#define OP_JNZ 0x09
+#define OP_HLT  0x00
+#define OP_LDI  0x01
+#define OP_ADD  0x02
+#define OP_SUB  0x03
+#define OP_JMP  0x04
+#define OP_JZ   0x05
+#define OP_MOV  0x06
+#define OP_INC  0x07
+#define OP_CMP  0x08
+#define OP_JNZ  0x09
+#define OP_ST   0x0A
+#define OP_LD   0x0B
+#define OP_PUSH 0x0C
+#define OP_POP  0X0D
+
 
 struct CPU {
     uint8_t R[4];                   // General purpose registers
     uint16_t PC;                    // PC registers
+    uint16_t SP;                    // Stack Pointer
     uint8_t FLAGS;                  // Status flags
     uint8_t running;                // CPU running status
     uint8_t memory[MEMORY_SIZE];    // Main memory

@@ -17,3 +17,9 @@
 
 ## Comparison
 - `CMP R0, R1` - Compare registers
+
+## Memory Operations
+- `ST R0, [address]` - Store register to memory
+- `LD R1, [address]` - Load from memory to register
+- `PUSH R0` - Push register to stack
+- `POP R1` - Pop from stack to register

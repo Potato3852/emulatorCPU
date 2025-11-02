@@ -40,3 +40,13 @@ Instructions have variable length:
 ## Data Types
 - **Integers**: 8-bit unsigned (0-255)
 - **Addresses**: 16-bit unsigned (0-65535)
+
+## Memory Access
+- Direct addressing with ST/LD instructions
+- Stack operations with PUSH/POP  
+- 16-bit memory addresses
+
+## Stack
+- Grows downward (from higher to lower addresses)
+- Stack Pointer (SP) starts at 0x0200
+- LIFO (Last-In-First-Out) structure
