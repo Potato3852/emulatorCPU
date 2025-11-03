@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "debugger.h"
 #include<stdio.h>
 
 void cpu_init(struct CPU* cpu) {
@@ -14,6 +15,9 @@ void cpu_init(struct CPU* cpu) {
     for(int i = 0; i < MEMORY_SIZE; ++i) {
         cpu->memory[i] = 0;
     }
+
+    //DEBUG:
+    debugger_init(&cpu->debugger);
 }
 
 void cpu_print_state(struct CPU* cpu) {
@@ -41,7 +45,12 @@ uint8_t memory_read(struct CPU* cpu, uint16_t address) {
 }
 
 void cpu_step(struct CPU* cpu) {
+    //DEBUG:
+    debugger_check_breakpoint(cpu);
+
     uint8_t instruction = memory_read(cpu, cpu->PC);
+
+    debugger_trace_step(cpu, instruction);
 
     //DEBUG:: printf("DEBUG: PC=0x%04X, instruction=0x%02X, R0=%d\n", cpu->PC, instruction, cpu->R[0]);
 
@@ -243,7 +252,11 @@ void cpu_run(struct CPU* cpu) {
     printf("CPU running...\n");
 
     while(cpu->running) {
-        cpu_step(cpu);
+        if(cpu->debugger.interactive) {
+            debugger_interactive(cpu);
+        }else {
+            cpu_step(cpu);
+        }
     }
 
     printf("CPU stopped.\n");

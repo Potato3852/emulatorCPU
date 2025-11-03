@@ -7,6 +7,7 @@
 #define MEMORY_SIZE 65536
 #define FLAG_ZERO (1 << 0)
 #define FLAG_CARRY (1 << 1)
+#define DEBUGGER_BREAKPOINTS 16
 
 //Opcodes
 #define OP_HLT  0x00
@@ -24,6 +25,14 @@
 #define OP_PUSH 0x0C
 #define OP_POP  0X0D
 
+struct Debugger {
+    uint16_t breakpoints[DEBUGGER_BREAKPOINTS];
+    int breakpoint_count;
+    int trace_mode;
+    int interactive;
+    int steps;
+    uint16_t last_pc;
+};
 
 struct CPU {
     uint8_t R[4];                   // General purpose registers
@@ -32,6 +41,7 @@ struct CPU {
     uint8_t FLAGS;                  // Status flags
     uint8_t running;                // CPU running status
     uint8_t memory[MEMORY_SIZE];    // Main memory
+    struct Debugger debugger;       //Debugger
 };
 
 // Rules for registers:

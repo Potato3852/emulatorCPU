@@ -2,6 +2,7 @@
 #include "assembler.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
@@ -29,10 +30,17 @@ int main(int argc, char* argv[]) {
         
     struct CPU cpu;
     cpu_init(&cpu);
+
+    if(argc > 2) {
+        if(strcmp(argv[2], "--debug") == 0) {
+            cpu.debugger.interactive = 1;
+        } else if(strcmp(argv[2], "--trace") == 0) {
+            cpu.debugger.trace_mode = 1;
+        }
+    }
     
     assemble(&cpu, program, 0x0000);
     free(program);
-    
     cpu.PC = 0x0000;
     cpu_run(&cpu);
     cpu_print_state(&cpu);
