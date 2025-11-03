@@ -23,3 +23,17 @@
 - `LD R1, [address]` - Load from memory to register
 - `PUSH R0` - Push register to stack
 - `POP R1` - Pop from stack to register
+
+## Interrupt Operations
+- `INT n` - Software interrupt call (n = 0-7)
+- `IRET` - Return from interrupt
+- `EI` - Enable interrupts
+- `DI` - Disable interrupts
+
+## Debugging
+
+Use the built-in debugger to single-step through programs and inspect state:
+
+```bash
+./emulator test.asm --debug
+```

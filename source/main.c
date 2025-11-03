@@ -41,9 +41,15 @@ int main(int argc, char* argv[]) {
     
     assemble(&cpu, program, 0x0000);
     free(program);
+
     cpu.PC = 0x0000;
     cpu_run(&cpu);
     cpu_print_state(&cpu);
-    
+
+    printf("\n=== Memory dump around ISR0 (0x000E) ===\n");
+    for(int i = 0x000E; i < 0x0015; i++) {
+        printf("0x%04X: 0x%02X\n", i, cpu.memory[i]);
+    }
+        
     return 0;
 }

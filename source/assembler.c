@@ -71,6 +71,10 @@ void assemble_pass1(struct AssemblerState* state, const char* code, uint16_t sta
             else if (strcmp(line, "LD") == 0) address += 4;
             else if (strcmp(line, "PUSH") == 0) address += 2;
             else if (strcmp(line, "POP") == 0) address += 2;
+            else if (strcmp(line, "INT") == 0) address += 2;
+            else if (strcmp(line, "IRET") == 0) address += 1;
+            else if (strcmp(line, "EI") == 0) address += 1; 
+            else if (strcmp(line, "DI") == 0) address += 1; 
         }
 
         while(*pos != '\n' && *pos != '\0') pos++;
@@ -121,10 +125,18 @@ void assemble_pass2(struct AssemblerState* state, struct CPU* cpu, const char* c
             while(*pos == ' ') pos++;
             
             int value;
-            if(sscanf(pos, "%d", &value) != 1) {
-                printf("ERROR: Can't read value!\n");
+
+            if(sscanf(pos, "0x%x", &value) == 1) {
+            //bla bla bla
+
+            } else if(sscanf(pos, "%d", &value) == 1) {
+            //bla bla bla
+            
+            } else {
+                printf("ERROR: Can't read value after LDI!\n");
                 return;
             }
+
             memory_write(cpu, address++, value);
 
         } else if(strcmp(line, "HLT") == 0) {
@@ -457,6 +469,7 @@ void assemble_pass2(struct AssemblerState* state, struct CPU* cpu, const char* c
             pos++;
             uint8_t reg = *pos - '0';
             memory_write(cpu, address++, reg);
+
         } else if(strcmp(line, "POP") == 0) {
             memory_write(cpu, address++, OP_POP);
 
@@ -469,6 +482,28 @@ void assemble_pass2(struct AssemblerState* state, struct CPU* cpu, const char* c
             pos++;
             uint8_t reg = *pos - '0';
             memory_write(cpu, address++, reg);
+
+        } else if(strcmp(line, "INT") == 0) {
+            memory_write(cpu, address++, OP_INT);
+
+            while(*pos == ' ') pos++;
+
+            int vector;
+            if(sscanf(pos, "%d", &vector) != 1) {
+                printf("ERROR: Can't read interrupt vector!\n");
+                return;
+            }
+            memory_write(cpu, address++, vector);
+
+        } else if(strcmp(line, "IRET") == 0) {
+            memory_write(cpu, address++, OP_IRET);
+        
+        } else if(strcmp(line, "EI") == 0) {
+            memory_write(cpu, address++, OP_EI);
+
+        } else if(strcmp(line, "DI") == 0) {
+            memory_write(cpu, address++, OP_DI);
+
         }
 
         while(*pos != '\n' && *pos != '\0') pos++;

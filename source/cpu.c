@@ -11,6 +11,9 @@ void cpu_init(struct CPU* cpu) {
     cpu->SP = 0x200;
     cpu->FLAGS = 0;
     cpu->running = 1;
+    cpu->interrupt_enabled = 0;
+    cpu->interrupt_pending = 0xFF;
+    cpu->in_interrupt = 0;
 
     for(int i = 0; i < MEMORY_SIZE; ++i) {
         cpu->memory[i] = 0;
@@ -44,15 +47,53 @@ uint8_t memory_read(struct CPU* cpu, uint16_t address) {
     return 0;
 }
 
+void handle_interrupt(struct CPU* cpu, uint8_t vector) {
+    cpu->saved_PC = cpu->PC;
+    cpu->saved_FLAGS = cpu->FLAGS;
+
+    cpu->in_interrupt = 1;
+    cpu->interrupt_enabled = 0;
+
+    uint16_t vector_address = vector * 2;
+
+    uint8_t low_byte = memory_read(cpu, vector_address);
+    uint8_t high_byte = memory_read(cpu, vector_address + 1);
+    uint16_t handle_address = (high_byte << 8) + low_byte;
+
+    // DEBUG::
+    // printf("Vector table@0x%04X: [0x%02X 0x%02X] -> handler@0x%04X\n", vector_address, low_byte, high_byte, handle_address);
+    // printf("Saved PC=0x%04X, Saved FLAGS=0x%02X\n", cpu->saved_PC, cpu->saved_FLAGS);
+
+    if(handle_address != 0xFFFF) {
+        cpu->PC = handle_address;
+        printf("Interrupt %d handled at 0x%04X (vector@0x%04X)\n", vector, handle_address, vector_address);
+    } else {
+        printf("ERROR: No handler for interrupt %d (vector@0x%04X)\n", vector, vector_address);
+        cpu->running = 0;
+    }
+}
+
+void trigger_hardware_interrupt(struct CPU* cpu, uint8_t vector) {
+    if(vector < 8 && cpu->interrupt_enabled) {
+        cpu->interrupt_pending = vector;
+    }
+}
+
 void cpu_step(struct CPU* cpu) {
-    //DEBUG:
+    // DEBUG:
     debugger_check_breakpoint(cpu);
+
+    if(cpu->interrupt_enabled && cpu->interrupt_pending != 0xFF && !cpu->in_interrupt) {
+        handle_interrupt(cpu, cpu->interrupt_pending);
+        cpu->interrupt_pending = 0xFF;
+        return;
+    }
 
     uint8_t instruction = memory_read(cpu, cpu->PC);
 
     debugger_trace_step(cpu, instruction);
 
-    //DEBUG:: printf("DEBUG: PC=0x%04X, instruction=0x%02X, R0=%d\n", cpu->PC, instruction, cpu->R[0]);
+    // DEBUG:: printf("DEBUG: PC=0x%04X, instruction=0x%02X, R0=%d\n", cpu->PC, instruction, cpu->R[0]);
 
     cpu->PC++;
 
@@ -238,6 +279,33 @@ void cpu_step(struct CPU* cpu) {
                     cpu->SP++;
                     printf("DEBUG: POP R%d <- [SP=0x%04X] (value: %d)\n", reg, cpu->SP, cpu->R[reg]);
                 }
+                break;
+            }
+        
+        case OP_INT: {
+                uint8_t vector = memory_read(cpu, cpu->PC);
+                cpu->PC++;
+                if(vector < 8) {
+                    handle_interrupt(cpu, vector);
+                }
+                break;
+            }
+        
+        case OP_IRET: {
+                cpu->PC = cpu->saved_PC;
+                cpu->FLAGS = cpu->saved_FLAGS;
+                cpu->in_interrupt = 0;
+                cpu->interrupt_enabled = 1;
+                break;
+            }
+        
+        case OP_EI: {
+                cpu->interrupt_enabled = 1;
+                break;
+            }
+
+        case OP_DI: {
+                cpu->interrupt_enabled = 0;
                 break;
             }
 

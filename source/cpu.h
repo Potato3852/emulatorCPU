@@ -24,6 +24,10 @@
 #define OP_LD   0x0B
 #define OP_PUSH 0x0C
 #define OP_POP  0X0D
+#define OP_INT  0x0E
+#define OP_IRET 0x0F
+#define OP_EI   0x10
+#define OP_DI   0x11
 
 struct Debugger {
     uint16_t breakpoints[DEBUGGER_BREAKPOINTS];
@@ -41,7 +45,13 @@ struct CPU {
     uint8_t FLAGS;                  // Status flags
     uint8_t running;                // CPU running status
     uint8_t memory[MEMORY_SIZE];    // Main memory
-    struct Debugger debugger;       //Debugger
+    struct Debugger debugger;       // Debugger
+
+    uint8_t interrupt_enabled;      // Global interrupt enable flag
+    uint8_t interrupt_pending;      // Pending interrupt number (0-7)
+    uint16_t saved_PC;              // PC saved when interrupt occurs
+    uint8_t saved_FLAGS;            // FLAGS saved when interrupt occurs
+    uint8_t in_interrupt;           // Currently handling interrupt flag
 };
 
 // Rules for registers:

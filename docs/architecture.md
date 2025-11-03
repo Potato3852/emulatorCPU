@@ -50,3 +50,14 @@ Instructions have variable length:
 - Grows downward (from higher to lower addresses)
 - Stack Pointer (SP) starts at 0x0200
 - LIFO (Last-In-First-Out) structure
+
+## Debugging Support
+
+The emulator includes a powerful debugger with:
+- **Hardware breakpoints** - stop execution at specific addresses
+- **Register inspection** - view all CPU state in real-time  
+- **Memory examination** - peek at any memory location
+- **Execution tracing** - log every instruction executed
+- **Interactive control** - step through code manually
+
+Debugger integration is seamless - simply compile with `--debug` flag.
