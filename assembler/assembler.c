@@ -1,4 +1,4 @@
-#include "assembler.h"
+#include "../assembler/assembler.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -584,9 +584,4 @@ void assemble(struct CPU* cpu, const char* code, uint16_t start_address) {
     assemble_pass2(&state, cpu, code, start_address);
     
     printf("Assembling complete. Found %d labels\n", state.label_count);
-
-    printf("=== Memory dump after assembly ===\n");
-    for(int i = 0x0000; i < 0x0030; i++) {
-        printf("0x%04X: 0x%02X\n", i, cpu->memory[i]);
-    }
 }

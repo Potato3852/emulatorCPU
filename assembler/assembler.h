@@ -1,7 +1,7 @@
 #ifndef ASSEMBLER_H
 #define ASSEMBLER_H
 
-#include "cpu.h"
+#include "../core/cpu.h"
 
 #define MAX_LABELS 50
 

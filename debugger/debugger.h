@@ -1,7 +1,7 @@
 #ifndef DEBUGGER_H
 #define DEBUGGER_H
 
-#include "cpu.h"
+#include "../core/cpu.h"
 
 void debugger_init(struct Debugger* dbg);
 void debugger_add_breakpoint(struct Debugger* dbg, uint16_t address);

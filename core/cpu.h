@@ -1,8 +1,8 @@
 #ifndef CPU_H
 #define CPU_H
 
-#include<stdint.h>
-#include<stdio.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #define MEMORY_SIZE 65536
 #define FLAG_ZERO (1 << 0)

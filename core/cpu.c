@@ -1,6 +1,6 @@
-#include "cpu.h"
-#include "debugger.h"
-#include<stdio.h>
+#include "../core/cpu.h"
+#include "../debugger/debugger.h"
+#include <stdio.h>
 
 void cpu_init(struct CPU* cpu) {
     for(int i = 0; i < 4; i++) {

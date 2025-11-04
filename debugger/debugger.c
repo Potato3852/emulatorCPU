@@ -1,4 +1,4 @@
-#include "debugger.h"
+#include "../debugger/debugger.h"
 #include <string.h>
 #include <stdio.h>
 

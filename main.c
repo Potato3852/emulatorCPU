@@ -1,5 +1,5 @@
-#include "cpu.h"
-#include "assembler.h"
+#include "../core/cpu.h"
+#include "../assembler/assembler.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

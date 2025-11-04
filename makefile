@@ -1,8 +1,21 @@
-emulator: source/main.c source/cpu.c source/assembler.c source/debugger.c
-		gcc -Wall -o emulator source/main.c source/cpu.c source/assembler.c source/debugger.c
+CC = gcc
+CFLAGS = -Wall -Wextra -std=c99 -g
+SOURCES = main.c core/cpu.c assembler/assembler.c debugger/debugger.c
+TARGET = emulator
+
+$(TARGET): $(SOURCES)
+	$(CC) $(CFLAGS) -o $(TARGET) $(SOURCES)
 
 clean:
-		rm -f emulator
+	rm -f $(TARGET)
 
 run:
-		./emulator ~/emulatorCPU/examples/memory_test.asm
+	./emulator examples/demo.asm
+
+debug:
+	./emulator examples/demo.asm --debug
+
+trace:
+	./emulator examples/demo.asm --trace
+
+.PHONY: clean run debug trace
