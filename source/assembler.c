@@ -106,37 +106,43 @@ void assemble_pass2(struct AssemblerState* state, struct CPU* cpu, const char* c
         } else if(strcmp(line, "LDI") == 0) {
             memory_write(cpu, address++, OP_LDI);
 
-            while (*pos == ' ') pos++;
-            
+            while(*pos == ' ') pos++;
+
             int reg_index;
             if(sscanf(pos, "R%d", &reg_index) != 1) {
-                printf("ERROR: Can't read register after LDI!\n");
+                printf("ERROR: Can`t read reg after LDI!\n");
                 return;
             }
             memory_write(cpu, address++, reg_index);
-            
+
             while(*pos != ',' && *pos != '\n' && *pos != '\0') pos++;
             if(*pos != ',') {
-                printf("ERROR: Expected comma after register\n");
+                printf("ERROR: Can`t comma after reg\n");
                 return;
             }
             pos++;
-            
+
             while(*pos == ' ') pos++;
-            
+
             int value;
+            char num_buffer[32];
+            int i = 0;
 
-            if(sscanf(pos, "0x%x", &value) == 1) {
-            //bla bla bla
-
-            } else if(sscanf(pos, "%d", &value) == 1) {
-            //bla bla bla
-            
-            } else {
-                printf("ERROR: Can't read value after LDI!\n");
-                return;
+            while(*pos != ' ' && *pos != '\n' && *pos != '\0' && *pos != ',') {
+                if(i < 31) {
+                    num_buffer[i++] = *pos;
+                }
+                pos++;
             }
+            num_buffer[i] = '\0';
 
+            if(num_buffer[0] == '0' && (num_buffer[1] == 'x' || num_buffer[1] == 'X')) {
+                value = (int)strtol(num_buffer + 2, NULL, 16);
+                printf("DEBUG: LDI hex value %s -> %d (0x%02X)\n", num_buffer, value, value);
+            } else {
+                value = atoi(num_buffer);
+                printf("DEBUG: LDI decimal value %s -> %d (0x%02X)\n", num_buffer, value, value);
+            }
             memory_write(cpu, address++, value);
 
         } else if(strcmp(line, "HLT") == 0) {
@@ -338,124 +344,181 @@ void assemble_pass2(struct AssemblerState* state, struct CPU* cpu, const char* c
         } else if(strcmp(line, "ST") == 0) {
             memory_write(cpu, address++, OP_ST);
 
-            while (*pos == ' ') pos++;
+            char rest_of_line[256];
+            int i = 0;
+            while(*pos != '\n' && *pos != '\0' && i < 255) {
+                rest_of_line[i++] = *pos++;
+            }
+            rest_of_line[i] = '\0';
 
-            if(*pos != 'R') {
+            char* line_pos = rest_of_line;
+            
+            while(*line_pos == ' ') line_pos++;
+
+            if(*line_pos != 'R') {
                 printf("ERROR: Can't read reg after ST\n");
                 return;
             }
-            pos++;
-            uint8_t reg = *pos - '0';
+            line_pos++;
+            uint8_t reg = *line_pos - '0';
             memory_write(cpu, address++, reg);
 
-            while(*pos != ',' && *pos != '\n' && *pos != '\0') pos++;
-            if(*pos != ',') {
-                printf("ERROR: Can't read comma after reg\n");
+            while(*line_pos != ',' && *line_pos != '\0') line_pos++;
+            if(*line_pos != ',') {
+                printf("ERROR: Expected comma after register\n");
                 return;
             }
-            pos++;
+            line_pos++;
+
+            while(*line_pos == ' ') line_pos++;
+
+            if(*line_pos == '[') {
+                line_pos++;
+                while(*line_pos == ' ') line_pos++;
+            }
             
-            while(*pos == ' ') pos++;
+            if(*line_pos == 'R') {
 
-            if(*pos != '[') {
-                printf("ERROR: Can't read [ after comma\n");
-                return;
-            }
-            pos++;
+                line_pos++;
+                uint8_t addr_reg = *line_pos - '0';
+                line_pos++;
 
-            uint16_t mem_address = 0;
+                while(*line_pos == ' ') line_pos++;
 
-            if(*pos == '0' && (*(pos+1) == 'x' || *(pos+1) == 'X')) {
-                pos += 2;
-                while((*pos >= '0' && *pos <= '9') || (*pos >= 'a' && *pos <= 'f') || (*pos >= 'A' && *pos <= 'F')) {
-                    uint8_t digit;
-                    if(*pos >= '0' && *pos <= '9') digit = *pos - '0';
-                    else if(*pos >= 'a' && *pos <= 'f') digit = *pos - 'a' + 10;
-                    else digit = *pos - 'A' + 10;
-                    
-                    mem_address = (mem_address << 4) | digit;
-                    pos++;
+                if(*line_pos == ']') {
+
+                    memory_write(cpu, address++, ADDR_INDIRECT);
+                    memory_write(cpu, address++, addr_reg);
+                } else if(*line_pos == '+') {
+
+                    line_pos++;
+                    while(*line_pos == ' ') line_pos++;
+
+                    uint16_t offset;
+                    if(sscanf(line_pos, "%hu", &offset) == 1) {
+                        memory_write(cpu, address++, ADDR_INDEXED);
+                        memory_write(cpu, address++, addr_reg);
+                        memory_write(cpu, address++, offset & 0xFF);
+                        memory_write(cpu, address++, (offset >> 8) & 0xFF);
+                    }
                 }
             } else {
-                while(*pos >= '0' && *pos <= '9') {
-                    mem_address = mem_address * 10 + (*pos - '0');
-                    pos++;
+                uint16_t mem_addr = 0;
+
+                if(*line_pos == '0' && (*(line_pos+1) == 'x' || *(line_pos+1) == 'X')) {
+                    line_pos += 2;
+                    while((*line_pos >= '0' && *line_pos <= '9') || 
+                        (*line_pos >= 'a' && *line_pos <= 'f') || 
+                        (*line_pos >= 'A' && *line_pos <= 'F')) {
+                        uint8_t digit;
+                        if(*line_pos >= '0' && *line_pos <= '9') digit = *line_pos - '0';
+                        else if(*line_pos >= 'a' && *line_pos <= 'f') digit = *line_pos - 'a' + 10;
+                        else digit = *line_pos - 'A' + 10;
+                        mem_addr = (mem_addr << 4) | digit;
+                        line_pos++;
+                    }
+                } else {
+                    while(*line_pos >= '0' && *line_pos <= '9') {
+                        mem_addr = mem_addr * 10 + (*line_pos - '0');
+                        line_pos++;
+                    }
                 }
+
+                memory_write(cpu, address++, ADDR_DIRECT);
+                memory_write(cpu, address++, mem_addr & 0xFF);
+                memory_write(cpu, address++, (mem_addr >> 8) & 0xFF);
             }
 
-            while(*pos != ']' && *pos != '\n' && *pos != '\0') pos++;
-            
-            if(*pos != ']' && *pos != '\n' && *pos != '\0') {
-                printf("ERROR: Can't read ] after address\n");
-                return;
-            }
-            pos++;
-            
-            memory_write(cpu, address++, mem_address & 0xFF);
-            memory_write(cpu, address++, (mem_address >> 8) & 0xFF);
-
-            //DEBUG:: printf("DEBUG: ST parsed successfully: R%d -> [0x%04X]\n", reg, mem_address);
+            while(*pos != '\n' && *pos != '\0') pos++;
+            if(*pos == '\n') pos++; 
 
         } else if(strcmp(line, "LD") == 0) {
             memory_write(cpu, address++, OP_LD);
 
-            while (*pos == ' ') pos++;
+            char rest_of_line[256];
+            int i = 0;
+            while(*pos != '\n' && *pos != '\0' && i < 255) {
+                rest_of_line[i++] = *pos++;
+            }
+            rest_of_line[i] = '\0';
 
-            if(*pos != 'R') {
+            char* line_pos = rest_of_line;
+
+            while(*line_pos == ' ') line_pos++;
+
+            if(*line_pos != 'R') {
                 printf("ERROR: Can't read reg after LD\n");
                 return;
             }
-            pos++;
-            uint8_t reg = *pos - '0';
+            line_pos++;
+            uint8_t reg = *line_pos - '0';
             memory_write(cpu, address++, reg);
 
-            while(*pos != ',' && *pos != '\n' && *pos != '\0') pos++;
-            if(*pos != ',') {
+            while(*line_pos != ',' && *line_pos != '\0') line_pos++;
+            if(*line_pos != ',') {
                 printf("ERROR: Can't read comma after register\n");
                 return;
             }
-            pos++;
-            
-            while(*pos == ' ') pos++;
+            line_pos++;
 
-            if(*pos != '[') {
-                printf("ERROR: Can't read [ after comma\n");
-                return;
+            while(*line_pos == ' ') line_pos++;
+
+            if(*line_pos == '[') {
+                line_pos++;
+                while(*line_pos == ' ') line_pos++;
             }
-            pos++;
+            
+            if(*line_pos == 'R') {
+                line_pos++;
+                uint8_t addr_reg = *line_pos - '0';
+                line_pos++;
 
-            uint16_t mem_address = 0;
+                while(*line_pos == ' ') line_pos++;
 
-            if(*pos == '0' && (*(pos+1) == 'x' || *(pos+1) == 'X')) {
-                pos += 2;
-                while((*pos >= '0' && *pos <= '9') || (*pos >= 'a' && *pos <= 'f') || (*pos >= 'A' && *pos <= 'F')) {
-                    uint8_t digit;
-                    if(*pos >= '0' && *pos <= '9') digit = *pos - '0';
-                    else if(*pos >= 'a' && *pos <= 'f') digit = *pos - 'a' + 10;
-                    else digit = *pos - 'A' + 10;
-                    
-                    mem_address = (mem_address << 4) | digit;
-                    pos++;
+                if(*line_pos == ']') {
+                    memory_write(cpu, address++, ADDR_INDIRECT);
+                    memory_write(cpu, address++, addr_reg);
+                } else if(*line_pos == '+') {
+                    line_pos++;
+                    while(*line_pos == ' ') line_pos++;
+
+                    uint16_t offset;
+                    if(sscanf(line_pos, "%hu", &offset) == 1) {
+                        memory_write(cpu, address++, ADDR_INDEXED);
+                        memory_write(cpu, address++, addr_reg);
+                        memory_write(cpu, address++, offset & 0xFF);
+                        memory_write(cpu, address++, (offset >> 8) & 0xFF);
+                    }
                 }
             } else {
-                while(*pos >= '0' && *pos <= '9') {
-                    mem_address = mem_address * 10 + (*pos - '0');
-                    pos++;
-                }
-            }
-            
-            while(*pos != ']' && *pos != '\n' && *pos != '\0') pos++;
-            
-            if(*pos != ']') {
-                printf("ERROR: Can't read ] after address\n");
-                return;
-            }
-            pos++;
-            
-            memory_write(cpu, address++, mem_address & 0xFF);
-            memory_write(cpu, address++, (mem_address >> 8) & 0xFF);
+                uint16_t mem_addr = 0;
 
-            //DEBUG::     printf("DEBUG: LD parsed successfully: R%d <- [0x%04X]\n", reg, mem_address);
+                if(*line_pos == '0' && (*(line_pos+1) == 'x' || *(line_pos+1) == 'X')) {
+                    line_pos += 2;
+                    while((*line_pos >= '0' && *line_pos <= '9') || 
+                        (*line_pos >= 'a' && *line_pos <= 'f') || 
+                        (*line_pos >= 'A' && *line_pos <= 'F')) {
+                        uint8_t digit;
+                        if(*line_pos >= '0' && *line_pos <= '9') digit = *line_pos - '0';
+                        else if(*line_pos >= 'a' && *line_pos <= 'f') digit = *line_pos - 'a' + 10;
+                        else digit = *line_pos - 'A' + 10;
+                        mem_addr = (mem_addr << 4) | digit;
+                        line_pos++;
+                    }
+                } else {
+                    while(*line_pos >= '0' && *line_pos <= '9') {
+                        mem_addr = mem_addr * 10 + (*line_pos - '0');
+                        line_pos++;
+                    }
+                }
+
+                memory_write(cpu, address++, ADDR_DIRECT);
+                memory_write(cpu, address++, mem_addr & 0xFF);
+                memory_write(cpu, address++, (mem_addr >> 8) & 0xFF);
+            }
+
+            while(*pos != '\n' && *pos != '\0') pos++;
+            if(*pos == '\n') pos++;
 
         } else if(strcmp(line, "PUSH") == 0) {
             memory_write(cpu, address++, OP_PUSH);
@@ -521,4 +584,9 @@ void assemble(struct CPU* cpu, const char* code, uint16_t start_address) {
     assemble_pass2(&state, cpu, code, start_address);
     
     printf("Assembling complete. Found %d labels\n", state.label_count);
+
+    printf("=== Memory dump after assembly ===\n");
+    for(int i = 0x0000; i < 0x0030; i++) {
+        printf("0x%04X: 0x%02X\n", i, cpu->memory[i]);
+    }
 }

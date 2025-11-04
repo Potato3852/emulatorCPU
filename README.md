@@ -41,3 +41,9 @@ gcc main.c assembler.c cpu.c -o emulator
 - **Interrupt Return**: `IRET` - return from interrupt  
 - **Interrupt Control**: `EI`/`DI` - enable/disable interrupts
 - **Memory-mapped Vector Table** - flexible interrupt handling
+
+## 🎯 Advanced Addressing System (**NEW**)
+- **Direct addressing** - `[0x1234]`
+- **Indirect addressing** - `[Rx]` 
+- **Indexed addressing** - `[Rx + N]`
+- **Complete ST/LD instruction support**

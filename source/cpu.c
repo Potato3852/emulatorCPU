@@ -73,6 +73,40 @@ void handle_interrupt(struct CPU* cpu, uint8_t vector) {
     }
 }
 
+uint16_t calculate_address(struct CPU* cpu, uint8_t mode) {
+    switch(mode) {
+        case ADDR_DIRECT: {
+            uint8_t low = memory_read(cpu, cpu->PC++);
+            uint8_t high = memory_read(cpu, cpu->PC++);
+            return (high << 8) | low;
+        }
+
+        case ADDR_INDIRECT: {
+            uint8_t reg = memory_read(cpu, cpu->PC++);
+            if(reg < 4) {
+                return cpu->R[reg];
+            }
+            return 0;
+        }
+
+        case ADDR_INDEXED: {
+            uint8_t reg = memory_read(cpu, cpu->PC++);
+            uint8_t low = memory_read(cpu, cpu->PC++);
+            uint8_t high = memory_read(cpu, cpu->PC++);
+            uint16_t offset = (high << 8) | low;
+
+            if(reg < 4) {
+                return cpu->R[reg] + offset;
+            }
+            return offset;
+        }
+
+        default:
+            printf("ERROR: Unknown addressing mode 0x%02X\n", mode);
+            return 0;
+    }
+}
+
 void trigger_hardware_interrupt(struct CPU* cpu, uint8_t vector) {
     if(vector < 8 && cpu->interrupt_enabled) {
         cpu->interrupt_pending = vector;
@@ -103,211 +137,203 @@ void cpu_step(struct CPU* cpu) {
             break;
 
         case OP_LDI: {
-                uint8_t reg_index = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t value = memory_read(cpu, cpu->PC);
-                cpu->PC++;
+            uint8_t reg_index = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            uint8_t value = memory_read(cpu, cpu->PC);
+            cpu->PC++;
 
-                if(reg_index < 4) {
-                    cpu->R[reg_index] = value;
-                }
-                break;
+            if(reg_index < 4) {
+                cpu->R[reg_index] = value;
             }
+            break;
+        }
 
         case OP_ADD: {
-                uint8_t dest_reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t src_reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
+            uint8_t dest_reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            uint8_t src_reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
 
-                if(dest_reg < 4 && src_reg < 4) {
-                    cpu->R[dest_reg] += cpu->R[src_reg];
-                }
-
-                update_flags(cpu, cpu->R[dest_reg]);
-
-                break;
+            if(dest_reg < 4 && src_reg < 4) {
+                cpu->R[dest_reg] += cpu->R[src_reg];
             }
+
+            update_flags(cpu, cpu->R[dest_reg]);
+
+            break;
+        }
         
         case OP_SUB: {
-                uint8_t dest_reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t src_reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
+            uint8_t dest_reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            uint8_t src_reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
 
-                if(dest_reg < 4 && src_reg < 4) {
-                    cpu->R[dest_reg] -= cpu->R[src_reg];
-                }
-
-                update_flags(cpu, cpu->R[dest_reg]);
-
-                break;
+            if(dest_reg < 4 && src_reg < 4) {
+                cpu->R[dest_reg] -= cpu->R[src_reg];
             }
+
+            update_flags(cpu, cpu->R[dest_reg]);
+
+            break;
+        }
         
         case OP_JMP: {
-                uint8_t low_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t high_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
+            uint8_t low_byte = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            uint8_t high_byte = memory_read(cpu, cpu->PC);
+            cpu->PC++;
 
-                uint16_t jump_address = (high_byte << 8) | low_byte;
-                cpu->PC = jump_address;
+            uint16_t jump_address = (high_byte << 8) | low_byte;
+            cpu->PC = jump_address;
 
-                break;
-            }
+            break;
+        }
         
         case OP_JZ: {
-                uint8_t low_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t high_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                
-                if (cpu->FLAGS & FLAG_ZERO) {
-                    uint16_t jump_address = (high_byte << 8) | low_byte;
-                    cpu->PC = jump_address;
-                }
-                break;
+            uint8_t low_byte = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            uint8_t high_byte = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            
+            if (cpu->FLAGS & FLAG_ZERO) {
+                uint16_t jump_address = (high_byte << 8) | low_byte;
+                cpu->PC = jump_address;
             }
+            break;
+        }
 
         case OP_MOV: {
-                uint8_t dest_reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t src_reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
+            uint8_t dest_reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            uint8_t src_reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
 
-                if(dest_reg < 4 && src_reg < 4) {
-                    cpu->R[dest_reg] = cpu->R[src_reg];
-                }
-                break;
+            if(dest_reg < 4 && src_reg < 4) {
+                cpu->R[dest_reg] = cpu->R[src_reg];
             }
+            break;
+        }
         
         case OP_INC: {
-                uint8_t reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
+            uint8_t reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
 
-                if(reg < 4) {
-                    cpu->R[reg]++;
-                    update_flags(cpu, cpu->R[reg]);
-                }
-                break;
+            if(reg < 4) {
+                cpu->R[reg]++;
+                update_flags(cpu, cpu->R[reg]);
             }
+            break;
+        }
 
         case OP_CMP: {
-                uint8_t reg_a = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t reg_b = memory_read(cpu, cpu->PC);
-                cpu->PC++;
+            uint8_t reg_a = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            uint8_t reg_b = memory_read(cpu, cpu->PC);
+            cpu->PC++;
 
-                if(reg_a < 4 && reg_b < 4) {
-                    uint8_t value_a = cpu->R[reg_a];
-                    uint8_t value_b = cpu->R[reg_b];
+            if(reg_a < 4 && reg_b < 4) {
+                uint8_t value_a = cpu->R[reg_a];
+                uint8_t value_b = cpu->R[reg_b];
 
-                    uint8_t result = value_a - value_b;
-                    update_flags(cpu, result);
-                }
-                break;
+                uint8_t result = value_a - value_b;
+                update_flags(cpu, result);
             }
+            break;
+        }
 
         case OP_JNZ: {
-                uint8_t low_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t high_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
+            uint8_t low_byte = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            uint8_t high_byte = memory_read(cpu, cpu->PC);
+            cpu->PC++;
 
-                //DEBUG:: uint16_t jmp_address = (high_byte << 8) | low_byte;
-                //DEBUG:: printf("JNZ DEBUG: low=0x%02X, high=0x%02X, address=0x%04X, Z-flag=%d\n", low_byte, high_byte, jmp_address, (cpu->FLAGS & FLAG_ZERO) ? 1 : 0);
+            //DEBUG:: uint16_t jmp_address = (high_byte << 8) | low_byte;
+            //DEBUG:: printf("JNZ DEBUG: low=0x%02X, high=0x%02X, address=0x%04X, Z-flag=%d\n", low_byte, high_byte, jmp_address, (cpu->FLAGS & FLAG_ZERO) ? 1 : 0);
 
-                if(!(cpu->FLAGS & FLAG_ZERO)) {
-                    uint16_t jmp_address = (high_byte << 8) | low_byte;
-                    cpu->PC = jmp_address;
-                }
-                break;
+            if(!(cpu->FLAGS & FLAG_ZERO)) {
+                uint16_t jmp_address = (high_byte << 8) | low_byte;
+                cpu->PC = jmp_address;
             }
+            break;
+        }
 
         case OP_ST: {
-                uint8_t reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t low_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t high_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                
-                uint16_t mem_address = (high_byte << 8) | low_byte;
-                
-                if(reg < 4) {
-                    memory_write(cpu, mem_address, cpu->R[reg]);
-                    printf("DEBUG: ST R%d -> [0x%04X] (value: %d)\n", reg, mem_address, cpu->R[reg]);
-                }
-                break;
+            uint8_t reg = memory_read(cpu, cpu->PC++);
+            uint8_t addr_mode = memory_read(cpu, cpu->PC++);
+
+            uint16_t address = calculate_address(cpu, addr_mode);
+            
+            if(reg < 4) {
+                memory_write(cpu, address, cpu->R[reg]);
+                printf("DEBUG: ST R%d -> [0x%04X] (value: %d)\n", reg, address, cpu->R[reg]);
             }
+            break;
+        }
 
         case OP_LD: {
-                uint8_t reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t low_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                uint8_t high_byte = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                
-                uint16_t mem_address = (high_byte << 8) | low_byte;
-                
-                if(reg < 4) {
-                    cpu->R[reg] = memory_read(cpu, mem_address);
-                    printf("DEBUG: LD R%d <- [0x%04X] (value: %d)\n", reg, mem_address, cpu->R[reg]);
-                }
-                break;
-            }  
+            uint8_t reg = memory_read(cpu, cpu->PC++);
+            uint8_t addr_mode = memory_read(cpu, cpu->PC++);
+
+            uint16_t address = calculate_address(cpu, addr_mode);
+            
+            if(reg < 4) {
+                cpu->R[reg] = memory_read(cpu, address);
+                printf("DEBUG: LD R%d <- [0x%04X] (value: %d)\n", reg, address, cpu->R[reg]);
+            }
+            break;
+        }  
 
         case OP_PUSH: {
-                uint8_t reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                
-                if(reg < 4) {
-                    cpu->SP--;
-                    memory_write(cpu, cpu->SP, cpu->R[reg]);
-                    printf("DEBUG: PUSH R%d -> [SP=0x%04X]\n", reg, cpu->SP);
-                }
-                break;
+            uint8_t reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            
+            if(reg < 4) {
+                cpu->SP--;
+                memory_write(cpu, cpu->SP, cpu->R[reg]);
+                printf("DEBUG: PUSH R%d -> [SP=0x%04X]\n", reg, cpu->SP);
             }
+            break;
+        }
 
         case OP_POP: {
-                uint8_t reg = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                
-                if(reg < 4) {
-                    cpu->R[reg] = memory_read(cpu, cpu->SP);
-                    cpu->SP++;
-                    printf("DEBUG: POP R%d <- [SP=0x%04X] (value: %d)\n", reg, cpu->SP, cpu->R[reg]);
-                }
-                break;
+            uint8_t reg = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            
+            if(reg < 4) {
+                cpu->R[reg] = memory_read(cpu, cpu->SP);
+                cpu->SP++;
+                printf("DEBUG: POP R%d <- [SP=0x%04X] (value: %d)\n", reg, cpu->SP, cpu->R[reg]);
             }
+            break;
+        }
         
         case OP_INT: {
-                uint8_t vector = memory_read(cpu, cpu->PC);
-                cpu->PC++;
-                if(vector < 8) {
-                    handle_interrupt(cpu, vector);
-                }
-                break;
+            uint8_t vector = memory_read(cpu, cpu->PC);
+            cpu->PC++;
+            if(vector < 8) {
+                handle_interrupt(cpu, vector);
             }
+            break;
+        }
         
         case OP_IRET: {
-                cpu->PC = cpu->saved_PC;
-                cpu->FLAGS = cpu->saved_FLAGS;
-                cpu->in_interrupt = 0;
-                cpu->interrupt_enabled = 1;
-                break;
-            }
+            cpu->PC = cpu->saved_PC;
+            cpu->FLAGS = cpu->saved_FLAGS;
+            cpu->in_interrupt = 0;
+            cpu->interrupt_enabled = 1;
+            break;
+        }
         
         case OP_EI: {
-                cpu->interrupt_enabled = 1;
-                break;
-            }
+            cpu->interrupt_enabled = 1;
+            break;
+        }
 
         case OP_DI: {
-                cpu->interrupt_enabled = 0;
-                break;
-            }
+            cpu->interrupt_enabled = 0;
+            break;
+        }
 
         default:
             printf("Unknown instruction: 0x%02X at PC=0x%04X\n", instruction, cpu->PC);

@@ -9,7 +9,7 @@
 #define FLAG_CARRY (1 << 1)
 #define DEBUGGER_BREAKPOINTS 16
 
-//Opcodes
+// Opcodes
 #define OP_HLT  0x00
 #define OP_LDI  0x01
 #define OP_ADD  0x02
@@ -28,6 +28,11 @@
 #define OP_IRET 0x0F
 #define OP_EI   0x10
 #define OP_DI   0x11
+
+// Addresses
+#define ADDR_DIRECT    0x00  // [0x1234]
+#define ADDR_INDIRECT  0x01  // [R0]
+#define ADDR_INDEXED   0x02  // [R0 + N]
 
 struct Debugger {
     uint16_t breakpoints[DEBUGGER_BREAKPOINTS];
@@ -52,6 +57,8 @@ struct CPU {
     uint16_t saved_PC;              // PC saved when interrupt occurs
     uint8_t saved_FLAGS;            // FLAGS saved when interrupt occurs
     uint8_t in_interrupt;           // Currently handling interrupt flag
+
+    uint8_t addr_mode;              // Current addressing mode
 };
 
 // Rules for registers:
