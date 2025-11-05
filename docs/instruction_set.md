@@ -30,6 +30,10 @@
 - `EI` - Enable interrupts
 - `DI` - Disable interrupts
 
+### GPU Control
+- `GPU_CLEAR` - Clear screen
+- `GPU_DRAW 10, 20, 1` - Draw white pixel at x = 10, y = 20
+
 ## Debugging
 
 Use the built-in debugger to single-step through programs and inspect state:

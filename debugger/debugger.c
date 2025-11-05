@@ -57,6 +57,12 @@ void debugger_interactive(struct CPU* cpu) {
             break;
         }
 
+        printf("DEBUG: command='%s' (len=%zu, chars: ", command, strlen(command));
+        for(int i = 0; i < strlen(command); i++) {
+            printf("0x%02X ", command[i]);
+        }
+        printf(")\n");
+
         command[strcspn(command, "\n")] = 0;
 
         if(strcmp(command, "s") == 0) {
@@ -92,10 +98,17 @@ void debugger_interactive(struct CPU* cpu) {
         } else if(strcmp(command, "q") == 0) {
             cpu->running = 0;
             break;
+
         } else if(strcmp(command, "help") == 0) {
             printf("Commands: s=step, c=continue, r=registers, m=memory, b=breakpoint, q=quit\n");
+
+        } else if(strcmp(command, "g")==0) {
+            debugger_gpu_mode(cpu);
+
         } else {
-            printf("Unknown command. Type 'help' for commands.\n");
+            if(command[0] != '\0') {
+                printf("Unknown command. Type 'help' for commands.\n");
+            }
         }
     }
 }
@@ -129,5 +142,80 @@ void debugger_trace_step(struct CPU* cpu, uint8_t instruction) {
         printf("[TRACE] PC=0x%04X, Instruction=0x%02X \n", cpu->debugger.last_pc, instruction);
         debugger_print_registers(cpu);
         printf("\n");
+    }
+}
+
+void debugger_gpu_mode(struct CPU* cpu) {
+    char command;
+    int step_mode = 0;
+    uint64_t start_cycles = cpu->cycles;
+
+    printf("\n=== GPU INTERACTIVE DEBUGGER ===\n");
+    printf("Manual:\n");
+    printf("  s - step\n");
+    printf("  r - run to the next GPU\n"); 
+    printf("  c - continuous execution\n");
+    printf("  i - info\n");
+    printf("  q - quit\n");
+
+    while(1) {
+        printf("\n┌────────────────────────────────────────────────────────────────┐\n");
+        printf("│ FRAME: %-4lu  CYCLES: %-6lu  PC: 0x%04X                         │\n", 
+               cpu->cycles - start_cycles, cpu->cycles, cpu->PC);
+        printf("└────────────────────────────────────────────────────────────────┘\n");
+
+        gpu_render_console(&cpu->gpu);
+
+        printf("\nCommand(s/r/c/i/q): ");
+        scanf(" %c", &command);
+
+        switch(command) {
+            case 's': {
+                cpu_step(cpu);
+                break;
+            }
+
+            case 'r': {
+                while(cpu->running && !cpu->gpu.dirty) {
+                    cpu_step(cpu);
+                    if (cpu->cycles - start_cycles > 10000) {
+                        printf("Limit of Steps!!!\n");
+                        break;
+                    }
+                }
+                break;
+            }
+
+            case 'c': {
+                cpu->debugger.interactive = 0;
+                return;
+            }
+
+            case 'i': {
+                printf("\nSTATUS INFORMATION:\n");
+                debugger_print_registers(cpu);
+
+                printf("GPU Dirty: %d\n", cpu->gpu.dirty);
+                printf("Timer: %s\n", (cpu->timer.control & TIMER_ENABLE) ? "ON" : "OFF");
+                printf("Interrupts: %s\n", cpu->interrupt_enabled ? "ON" : "OFF");
+
+                break;
+            }
+
+            case 'q': {
+                printf("Exit...\n");
+                return;
+            }
+
+            default: {
+                printf("Unknown command!!!\n");
+                break;
+            }
+        }
+
+        if(!cpu->running) {
+            printf("Shoutdown...");
+            break;
+        }
     }
 }

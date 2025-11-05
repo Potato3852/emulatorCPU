@@ -3,8 +3,10 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include "../peripherals/gpu.h"
+#include "../peripherals/timer.h"
 
-#define MEMORY_SIZE 65536
+#define MEMORY_SIZE 1024
 #define FLAG_ZERO (1 << 0)
 #define FLAG_CARRY (1 << 1)
 #define DEBUGGER_BREAKPOINTS 16
@@ -28,6 +30,10 @@
 #define OP_IRET 0x0F
 #define OP_EI   0x10
 #define OP_DI   0x11
+#define OP_DEC  0x12
+//...
+#define OP_GPU_CLEAR 0x20
+#define OP_GPU_DRAW  0x21
 
 // Addresses
 #define ADDR_DIRECT    0x00  // [0x1234]
@@ -59,6 +65,10 @@ struct CPU {
     uint8_t in_interrupt;           // Currently handling interrupt flag
 
     uint8_t addr_mode;              // Current addressing mode
+
+    struct GPU gpu;                 // bruh... GPU
+    struct Timer timer;             // bruh... timer for gpu
+    uint64_t cycles;                // bruh... cycles for gpu
 };
 
 // Rules for registers:

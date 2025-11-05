@@ -14,6 +14,7 @@
 | `m 0x1000` | Show memory at address |
 | `r` | Show all registers |
 | `t` | Toggle instruction tracing |
+| `g` | Open GPU debugger |
 | `help` | Show all commands |
 
 ## Debugging Techniques
@@ -21,3 +22,9 @@
 - Use memory watch to track variable changes  
 - Trace mode shows execution flow
 - Register inspection reveals calculation results
+
+### GPU Debugging Features
+- **Frame Stepping**: See each frame render in real-time
+- **Cycle Counting**: Track performance between frames  
+- **Register Inspection**: See CPU state between renders
+- **Timer Integration**: Monitor timer interrupts affecting rendering

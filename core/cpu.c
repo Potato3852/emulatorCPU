@@ -1,5 +1,7 @@
 #include "../core/cpu.h"
 #include "../debugger/debugger.h"
+#include "../peripherals/gpu.h"
+#include "../peripherals/timer.h"
 #include <stdio.h>
 
 void cpu_init(struct CPU* cpu) {
@@ -12,14 +14,19 @@ void cpu_init(struct CPU* cpu) {
     cpu->FLAGS = 0;
     cpu->running = 1;
     cpu->interrupt_enabled = 0;
-    cpu->interrupt_pending = 0xFF;
+    cpu->interrupt_pending = 0;
     cpu->in_interrupt = 0;
 
     for(int i = 0; i < MEMORY_SIZE; ++i) {
         cpu->memory[i] = 0;
     }
 
-    //DEBUG:
+    // MODULES:
+    gpu_init(&cpu->gpu);
+    timer_init(&cpu->timer, 1);
+    cpu->cycles = 0;
+
+    // DEBUG:
     debugger_init(&cpu->debugger);
 }
 
@@ -35,12 +42,31 @@ void cpu_print_state(struct CPU* cpu) {
 }
 
 void memory_write(struct CPU* cpu, uint16_t address, uint8_t value) {
+
+     if (address >= (uint16_t)&cpu->PC && address < (uint16_t)&cpu->PC + sizeof(cpu->PC)) {
+        return;
+    }
+
+    printf("MEMORY_WRITE: addr=0x%04X, val=0x%02X, CPU_PC_before=0x%04X\n", address, value, cpu->PC);
+
+    if(address >= TIMER_MMIO && address < TIMER_MMIO + 8) {
+        timer_write(&cpu->timer, address, value);
+        return;
+    }
+
     if(address < MEMORY_SIZE) {
         cpu->memory[address] = value;
     }
+
+    printf("MEMORY_WRITE: CPU_PC_after=0x%04X\n", cpu->PC);
 }
 
 uint8_t memory_read(struct CPU* cpu, uint16_t address) {
+
+    if (address >= TIMER_MMIO && address < TIMER_MMIO + 8) {
+        return timer_read(&cpu->timer, address);
+    }
+
     if(address < MEMORY_SIZE) {
         return cpu->memory[address];
     }
@@ -108,18 +134,33 @@ uint16_t calculate_address(struct CPU* cpu, uint8_t mode) {
 }
 
 void trigger_hardware_interrupt(struct CPU* cpu, uint8_t vector) {
-    if(vector < 8 && cpu->interrupt_enabled) {
+    if(vector < 8 && cpu->interrupt_enabled && !cpu->in_interrupt) {
         cpu->interrupt_pending = vector;
     }
 }
 
 void cpu_step(struct CPU* cpu) {
+    printf("CPU STEP: cycles=%lu\n", cpu->cycles); 
+    cpu->cycles++; 
+    
+    // DEBUG::
+    // printf("=== BEFORE timer_tick ===\n");
+    timer_tick(&cpu->timer);
+    // printf("=== AFTER timer_tick ===\n");   
+
+
+    if((cpu->timer.control & TIMER_IRQ_PENDING) && cpu->interrupt_enabled && !cpu->in_interrupt) {
+        printf(">>> TIMER IRQ TRIGGERED! Vector=%d\n", cpu->timer.irq_vector); 
+        cpu->timer.control &= ~TIMER_IRQ_PENDING;
+        trigger_hardware_interrupt(cpu, cpu->timer.irq_vector);
+    } 
+
     // DEBUG:
     debugger_check_breakpoint(cpu);
 
-    if(cpu->interrupt_enabled && cpu->interrupt_pending != 0xFF && !cpu->in_interrupt) {
+    if(cpu->interrupt_enabled && cpu->interrupt_pending) {
         handle_interrupt(cpu, cpu->interrupt_pending);
-        cpu->interrupt_pending = 0xFF;
+        cpu->interrupt_pending = 0;
         return;
     }
 
@@ -279,7 +320,6 @@ void cpu_step(struct CPU* cpu) {
             
             if(reg < 4) {
                 cpu->R[reg] = memory_read(cpu, address);
-                printf("DEBUG: LD R%d <- [0x%04X] (value: %d)\n", reg, address, cpu->R[reg]);
             }
             break;
         }  
@@ -291,7 +331,6 @@ void cpu_step(struct CPU* cpu) {
             if(reg < 4) {
                 cpu->SP--;
                 memory_write(cpu, cpu->SP, cpu->R[reg]);
-                printf("DEBUG: PUSH R%d -> [SP=0x%04X]\n", reg, cpu->SP);
             }
             break;
         }
@@ -303,7 +342,6 @@ void cpu_step(struct CPU* cpu) {
             if(reg < 4) {
                 cpu->R[reg] = memory_read(cpu, cpu->SP);
                 cpu->SP++;
-                printf("DEBUG: POP R%d <- [SP=0x%04X] (value: %d)\n", reg, cpu->SP, cpu->R[reg]);
             }
             break;
         }
@@ -335,6 +373,38 @@ void cpu_step(struct CPU* cpu) {
             break;
         }
 
+        case OP_GPU_CLEAR: {
+            gpu_clear(&cpu->gpu);
+
+            break;
+        }
+
+        case OP_GPU_DRAW: {
+            uint8_t x = memory_read(cpu, cpu->PC++);
+            uint8_t y = memory_read(cpu, cpu->PC++);
+            uint8_t color = memory_read(cpu, cpu->PC++);
+            gpu_draw_pixel(&cpu->gpu, x, y, color);
+
+            if (instruction == OP_GPU_CLEAR || instruction == OP_GPU_DRAW) {
+                if (cpu->gpu.dirty) {
+                    printf("\n=== GPU FRAME ===\n");
+                    gpu_render_console(&cpu->gpu);
+                    cpu->gpu.dirty = 0;
+                }
+            }
+
+            break;
+        }
+
+        case OP_DEC: {
+            uint8_t reg = memory_read(cpu, cpu->PC++);
+            if(reg < 4) {
+                cpu->R[reg]--;
+                update_flags(cpu, cpu->R[reg]);
+            }
+            break;
+        }
+
         default:
             printf("Unknown instruction: 0x%02X at PC=0x%04X\n", instruction, cpu->PC);
             cpu->running = 0;
@@ -345,13 +415,21 @@ void cpu_step(struct CPU* cpu) {
 void cpu_run(struct CPU* cpu) {
     printf("CPU running...\n");
 
-    while(cpu->running) {
+    uint64_t max_cycles = 100;
+    while(cpu->running && cpu->cycles < max_cycles) {
         if(cpu->debugger.interactive) {
             debugger_interactive(cpu);
         }else {
             cpu_step(cpu);
         }
     }
+
+    // Show GPU final state...
+    // if (cpu->gpu.dirty) {
+    //     printf("\n=== GPU FRAME (cycle %lu) ===\n", cpu->cycles);
+    //     gpu_render_console(&cpu->gpu);
+    //     cpu->gpu.dirty = 0;
+    // }
 
     printf("CPU stopped.\n");
 }

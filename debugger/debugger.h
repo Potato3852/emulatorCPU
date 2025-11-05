@@ -11,5 +11,6 @@ void debugger_interactive(struct CPU* cpu);
 void debugger_print_registers(struct CPU* cpu);
 void debugger_print_memory(struct CPU* cpu, uint16_t address, int lines);
 void debugger_trace_step(struct CPU* cpu, uint8_t instruction);
+void debugger_gpu_mode(struct CPU* cpu);
 
 #endif

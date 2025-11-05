@@ -61,3 +61,13 @@ The emulator includes a powerful debugger with:
 - **Interactive control** - step through code manually
 
 Debugger integration is seamless - simply compile with `--debug` flag.
+
+### Display System
+- **Resolution**: 64x32 pixels (1-bit monochrome)
+- **Memory**: 256-byte VRAM at calculated addresses
+- **Rendering**: Automatic console output every 100 cycles
+- **Performance**: Dirty flag optimization - redraw only when changed
+
+### GPU Instructions
+- `OP_GPU_CLEAR (0x20)` - Clear entire screen
+- `OP_GPU_DRAW (0x21)` - Draw pixel at (x, y) with color
